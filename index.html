@@ -12,7 +12,7 @@
             align-items: center;
             height: 100vh;
             overflow: hidden;
-            background-color: #87CEEB; /* Sky blue background */
+            background-color: #87CEEB;
             font-family: Arial, sans-serif;
         }
         #scoreboard {
@@ -22,7 +22,7 @@
             color: white;
         }
         canvas {
-            background-color: #add8e6; /* Light blue game area */
+            background-color: #add8e6;
             border: 2px solid #333;
             display: block;
         }
@@ -67,10 +67,11 @@
         // Game variables
         let score = 0;
         let isGameOver = false;
+        let offsetX = 0; // Offset for scrolling effect
 
         // Circle character properties
         const character = {
-            x: 50,
+            x: 100,
             y: 300,
             radius: 20,
             color: "red",
@@ -86,31 +87,30 @@
         const platforms = [
             { x: 0, y: 350, width: 800, height: 50 },
             { x: 200, y: 250, width: 150, height: 10 },
-            { x: 400, y: 200, width: 100, height: 10 },
-            { x: 600, y: 150, width: 100, height: 10 },
-            { x: 750, y: 100, width: 50, height: 10 }
+            { x: 500, y: 200, width: 100, height: 10 },
+            { x: 800, y: 150, width: 100, height: 10 },
+            { x: 1100, y: 100, width: 50, height: 10 }
         ];
 
         // Collectibles properties
         const collectibles = [
             { x: 220, y: 220, radius: 10, collected: false },
-            { x: 420, y: 170, radius: 10, collected: false },
-            { x: 620, y: 120, radius: 10, collected: false },
-            { x: 770, y: 70, radius: 10, collected: false }
+            { x: 520, y: 170, radius: 10, collected: false },
+            { x: 820, y: 120, radius: 10, collected: false },
+            { x: 1120, y: 70, radius: 10, collected: false }
         ];
 
-        // Draw the character with arms
+        // Draw the character as a hollow circle with arms
         function drawCharacter() {
-            // Draw the circle body
+            // Draw hollow circle body
             ctx.beginPath();
             ctx.arc(character.x, character.y, character.radius, 0, Math.PI * 2);
-            ctx.fillStyle = character.color;
-            ctx.fill();
+            ctx.strokeStyle = character.color;
+            ctx.lineWidth = 3;
+            ctx.stroke();
             ctx.closePath();
 
             // Draw arms
-            ctx.strokeStyle = "black";
-            ctx.lineWidth = 3;
             ctx.beginPath();
             ctx.moveTo(character.x - character.armLength, character.y);
             ctx.lineTo(character.x - character.radius, character.y - 10);
@@ -119,20 +119,20 @@
             ctx.stroke();
         }
 
-        // Draw platforms
+        // Draw platforms with scrolling
         function drawPlatforms() {
             ctx.fillStyle = "#654321"; // Brown platforms
             platforms.forEach(platform => {
-                ctx.fillRect(platform.x, platform.y, platform.width, platform.height);
+                ctx.fillRect(platform.x - offsetX, platform.y, platform.width, platform.height);
             });
         }
 
-        // Draw collectibles
+        // Draw collectibles with scrolling
         function drawCollectibles() {
             collectibles.forEach(collectible => {
                 if (!collectible.collected) {
                     ctx.beginPath();
-                    ctx.arc(collectible.x, collectible.y, collectible.radius, 0, Math.PI * 2);
+                    ctx.arc(collectible.x - offsetX, collectible.y, collectible.radius, 0, Math.PI * 2);
                     ctx.fillStyle = "gold";
                     ctx.fill();
                     ctx.closePath();
@@ -144,8 +144,8 @@
         function checkPlatformCollisions() {
             character.grounded = false;
             platforms.forEach(platform => {
-                if (character.x > platform.x - character.radius &&
-                    character.x < platform.x + platform.width + character.radius &&
+                if (character.x > platform.x - offsetX - character.radius &&
+                    character.x < platform.x - offsetX + platform.width + character.radius &&
                     character.y + character.radius >= platform.y &&
                     character.y + character.radius <= platform.y + platform.height) {
                     character.grounded = true;
@@ -158,7 +158,7 @@
         // Check if character collects any collectibles
         function checkCollectibles() {
             collectibles.forEach(collectible => {
-                if (!collectible.collected && Math.hypot(character.x - collectible.x, character.y - collectible.y) < character.radius + collectible.radius) {
+                if (!collectible.collected && Math.hypot(character.x - (collectible.x - offsetX), character.y - collectible.y) < character.radius + collectible.radius) {
                     collectible.collected = true;
                     score += 10;
                     updateScoreboard();
@@ -179,8 +179,10 @@
             if (!character.grounded) {
                 character.speedY += character.gravity;
             }
-            character.x += character.speedX;
             character.y += character.speedY;
+
+            // Move character forward and apply offset for scrolling
+            offsetX += 2; // Constant scroll speed to the right
 
             // Check for collisions
             checkPlatformCollisions();
