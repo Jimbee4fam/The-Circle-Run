@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Platformer Game</title>
+    <style>
+        body {
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            overflow: hidden;
+            background-color: #87CEEB; /* Sky blue background */
+            font-family: Arial, sans-serif;
+        }
+        #scoreboard {
+            position: absolute;
+            top: 10px;
+            font-size: 24px;
+            color: white;
+        }
+        canvas {
+            background-color: #add8e6; /* Light blue game area */
+            border: 2px solid #333;
+            display: block;
+        }
+        #controls {
+            position: absolute;
+            bottom: 20px;
+            display: flex;
+            justify-content: center;
+            width: 100%;
+            gap: 10px;
+        }
+        .control-btn {
+            background-color: #333;
+            color: white;
+            font-size: 20px;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div id="scoreboard">Score: 0</div>
+    <canvas id="gameCanvas"></canvas>
+    <div id="controls">
+        <button class="control-btn" id="left">Left</button>
+        <button class="control-btn" id="jump">Jump</button>
+        <button class="control-btn" id="right">Right</button>
+    </div>
+    <script>
+        const canvas = document.getElementById("gameCanvas");
+        const ctx = canvas.getContext("2d");
+
+        // Set responsive canvas size
+        function resizeCanvas() {
+            canvas.width = window.innerWidth * 0.9;
+            canvas.height = window.innerHeight * 0.8;
+        }
+        resizeCanvas();
+        window.addEventListener("resize", resizeCanvas);
+
+        // Game variables
+        let score = 0;
+        let isGameOver = false;
+
+        // Circle character properties
+        const character = {
+            x: 50,
+            y: 300,
+            radius: 20,
+            color: "red",
+            armLength: 15,
+            speedX: 0,
+            speedY: 0,
+            jumpPower: -10,
+            gravity: 0.5,
+            grounded: false
+        };
+
+        // Platform properties
+        const platforms = [
+            { x: 0, y: 350, width: 800, height: 50 },
+            { x: 200, y: 250, width: 150, height: 10 },
+            { x: 400, y: 200, width: 100, height: 10 },
+            { x: 600, y: 150, width: 100, height: 10 },
+            { x: 750, y: 100, width: 50, height: 10 }
+        ];
+
+        // Collectibles properties
+        const collectibles = [
+            { x: 220, y: 220, radius: 10, collected: false },
+            { x: 420, y: 170, radius: 10, collected: false },
+            { x: 620, y: 120, radius: 10, collected: false },
+            { x: 770, y: 70, radius: 10, collected: false }
+        ];
+
+        // Draw the character with arms
+        function drawCharacter() {
+            // Draw the circle body
+            ctx.beginPath();
+            ctx.arc(character.x, character.y, character.radius, 0, Math.PI * 2);
+            ctx.fillStyle = character.color;
+            ctx.fill();
+            ctx.closePath();
+
+            // Draw arms
+            ctx.strokeStyle = "black";
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(character.x - character.armLength, character.y);
+            ctx.lineTo(character.x - character.radius, character.y - 10);
+            ctx.moveTo(character.x + character.armLength, character.y);
+            ctx.lineTo(character.x + character.radius, character.y - 10);
+            ctx.stroke();
+        }
+
+        // Draw platforms
+        function drawPlatforms() {
+            ctx.fillStyle = "#654321"; // Brown platforms
+            platforms.forEach(platform => {
+                ctx.fillRect(platform.x, platform.y, platform.width, platform.height);
+            });
+        }
+
+        // Draw collectibles
+        function drawCollectibles() {
+            collectibles.forEach(collectible => {
+                if (!collectible.collected) {
+                    ctx.beginPath();
+                    ctx.arc(collectible.x, collectible.y, collectible.radius, 0, Math.PI * 2);
+                    ctx.fillStyle = "gold";
+                    ctx.fill();
+                    ctx.closePath();
+                }
+            });
+        }
+
+        // Check collisions with platforms
+        function checkPlatformCollisions() {
+            character.grounded = false;
+            platforms.forEach(platform => {
+                if (character.x > platform.x - character.radius &&
+                    character.x < platform.x + platform.width + character.radius &&
+                    character.y + character.radius >= platform.y &&
+                    character.y + character.radius <= platform.y + platform.height) {
+                    character.grounded = true;
+                    character.speedY = 0;
+                    character.y = platform.y - character.radius;
+                }
+            });
+        }
+
+        // Check if character collects any collectibles
+        function checkCollectibles() {
+            collectibles.forEach(collectible => {
+                if (!collectible.collected && Math.hypot(character.x - collectible.x, character.y - collectible.y) < character.radius + collectible.radius) {
+                    collectible.collected = true;
+                    score += 10;
+                    updateScoreboard();
+                }
+            });
+        }
+
+        // Update the scoreboard
+        function updateScoreboard() {
+            document.getElementById("scoreboard").innerText = `Score: ${score}`;
+        }
+
+        // Update game objects
+        function update() {
+            if (isGameOver) return;
+
+            // Apply gravity and movement
+            if (!character.grounded) {
+                character.speedY += character.gravity;
+            }
+            character.x += character.speedX;
+            character.y += character.speedY;
+
+            // Check for collisions
+            checkPlatformCollisions();
+            checkCollectibles();
+
+            // Win condition: reach last collectible
+            if (collectibles.every(c => c.collected)) {
+                alert("Congratulations! You collected all items!");
+                isGameOver = true;
+            }
+        }
+
+        // Draw all game objects
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            drawCharacter();
+            drawPlatforms();
+            drawCollectibles();
+        }
+
+        // Main game loop
+        function gameLoop() {
+            update();
+            draw();
+            if (!isGameOver) {
+                requestAnimationFrame(gameLoop);
+            }
+        }
+
+        // Touch controls
+        document.getElementById("left").addEventListener("mousedown", () => character.speedX = -3);
+        document.getElementById("right").addEventListener("mousedown", () => character.speedX = 3);
+        document.getElementById("jump").addEventListener("mousedown", () => {
+            if (character.grounded) character.speedY = character.jumpPower;
+        });
+
+        document.getElementById("left").addEventListener("mouseup", () => character.speedX = 0);
+        document.getElementById("right").addEventListener("mouseup", () => character.speedX = 0);
+
+        // Start the game
+        gameLoop();
+    </script>
+</body>
+</html>
